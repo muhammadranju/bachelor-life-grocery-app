@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "bachelor-life-grocery",
+    "slug": "bachelor-life-grocery",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/bachelor-life-logo.png",
+    "scheme": "bachelor-life-grocery",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/images/bachelor-life-logo.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/bachelor-life-logo.png"
+    },
+    "notification": {
+      "vapidPublicKey": "BHNE8yvlQ-KS7m2G4pOZWqudbKCfBzIPtiFdSYkUloLLWjifsD0pg49Kxfos4d7HYbDfJ_R-VQgs4HVmSR0P07E"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/bachelor-life-logo.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "backgroundColor": "#000000"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7c23a414-5d7a-4f5c-b5ed-512985cdc571"
+      }
+    }
+  }
+}
