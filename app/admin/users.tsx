@@ -48,13 +48,15 @@ export default function UserListScreen() {
 
       const response = await fetch(`${BACKEND_BASE_URL}/user`, {
         headers: {
-          Authorization: token || "",
+          Authorization: token ? `Bearer ${token}` : "",
         },
       });
       const json = await response.json();
       const userList = (json.data || []) as any[];
       setUsers(userList);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Fetch Users Error:", error);
+      Alert.alert("Error", "Failed to fetch users: " + error.message);
       setUsers([]);
     }
     setRefreshing(false);
@@ -77,7 +79,7 @@ export default function UserListScreen() {
           await fetch(`${BACKEND_BASE_URL}/user/${userId}`, {
             method: "DELETE",
             headers: {
-              Authorization: token || "",
+              Authorization: token ? `Bearer ${token}` : "",
             },
           });
           fetchUsers();
