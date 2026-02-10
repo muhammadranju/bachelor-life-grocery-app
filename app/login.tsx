@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 
 import React, { useState } from "react";
 import {
@@ -123,37 +123,31 @@ export default function LoginScreen() {
             </View>
 
             <TouchableOpacity
-              className={`w-full py-4 rounded-2xl flex-row justify-center items-center shadow-lg shadow-green-500/30 ${
-                loading ? "bg-[#00B761]/70" : "bg-[#00B761]"
-              }`}
               onPress={handleLogin}
               disabled={loading}
-              activeOpacity={0.9}
+              className={`py-4 rounded-2xl shadow-lg shadow-green-500/30 ${
+                loading ? "bg-gray-400" : "bg-[#00B761]"
+              }`}
             >
               {loading ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <Text className="text-white font-bold text-lg tracking-wide">
-                  Sign In
+                <Text className="text-white text-center font-bold text-lg">
+                  Log In
                 </Text>
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity className="mt-6 items-center">
-              <Text className="text-gray-400 text-sm">Forgot Password?</Text>
-            </TouchableOpacity>
+            <View className="mt-6 flex-row justify-center">
+              <Text className="text-gray-500">Don't have an account? </Text>
+              <Link href="/signup" asChild>
+                <TouchableOpacity>
+                  <Text className="text-[#00B761] font-bold">Sign Up</Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
           </View>
-
-          <View className="mt-8 flex-row justify-center items-center opacity-60">
-            <Ionicons
-              name="information-circle-outline"
-              size={18}
-              color="#6B7280"
-            />
-            <Text className="text-gray-500 ml-2 text-sm">
-              Ask Admin for an account
-            </Text>
-          </View>
+          <View className="h-10" />
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
