@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import { StatusBar } from "expo-status-bar";
 import React, { useRef, useState } from "react";
 import {
@@ -12,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../context/AuthContext";
 
 const { width } = Dimensions.get("window");
 
@@ -41,6 +41,7 @@ const SLIDES = [
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { completeOnboarding } = useAuth();
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -53,12 +54,7 @@ export default function OnboardingScreen() {
     } else {
       // Finish onboarding
       try {
-        if (Platform.OS === "web") {
-          localStorage.setItem("hasLaunched", "true");
-        } else {
-          await SecureStore.setItemAsync("hasLaunched", "true");
-        }
-        router.replace("/login");
+        await completeOnboarding();
       } catch (error) {
         console.error("Error saving onboarding status:", error);
         router.replace("/login");
@@ -68,12 +64,7 @@ export default function OnboardingScreen() {
 
   const handleSkip = async () => {
     try {
-      if (Platform.OS === "web") {
-        localStorage.setItem("hasLaunched", "true");
-      } else {
-        await SecureStore.setItemAsync("hasLaunched", "true");
-      }
-      router.replace("/login");
+      await completeOnboarding();
     } catch (error) {
       console.error("Error saving onboarding status:", error);
       router.replace("/login");
