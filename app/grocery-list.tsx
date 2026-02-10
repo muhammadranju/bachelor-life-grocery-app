@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import {
-  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -12,14 +12,17 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { StatusBar } from "expo-status-bar";
+import { useAlert } from "../context/AlertContext";
 import { useAuth } from "../context/AuthContext";
+import { useBudget } from "../context/BudgetContext";
 import { GroceryItem, useGrocery } from "../context/GroceryContext";
 
 export default function GroceryListScreen() {
   const router = useRouter();
   const { groceries, isLoading, deleteGrocery } = useGrocery();
+  const { refreshBudget } = useBudget();
   const { role } = useAuth();
+  const { showAlert } = useAlert();
   const [selectedItem, setSelectedItem] = useState<GroceryItem | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -27,20 +30,26 @@ export default function GroceryListScreen() {
     role === "admin" || role === "ADMIN" || role === "SUPER_ADMIN";
 
   const handleDelete = (id: string) => {
-    Alert.alert("Delete Item", "Are you sure you want to delete this item?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteGrocery(id);
-          } catch (error: any) {
-            Alert.alert("Error", error.message);
-          }
+    showAlert(
+      "Delete Item",
+      "Are you sure you want to delete this item?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteGrocery(id);
+              await refreshBudget();
+            } catch (error: any) {
+              showAlert("Error", error.message, [], "error");
+            }
+          },
         },
-      },
-    ]);
+      ],
+      "warning",
+    );
   };
 
   const openDetails = (item: GroceryItem) => {
@@ -55,67 +64,67 @@ export default function GroceryListScreen() {
 
   const renderItem = ({ item }: { item: GroceryItem }) => (
     <TouchableOpacity onPress={() => openDetails(item)} activeOpacity={0.8}>
-    <View className="bg-surface-light dark:bg-surface-dark p-5 mb-4 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 flex-row justify-between items-center">
-      <View className="flex-1 mr-4">
-        <Text className="text-lg font-bold text-text-primary dark:text-gray-100 mb-1">
-          {item.itemName}
-        </Text>
-        <View className="flex-row items-center mb-1">
-          <Ionicons
-            name="calendar-outline"
-            size={14}
-            color="#6B7280"
-            style={{ marginRight: 4 }}
-          />
-          <Text className="text-text-secondary dark:text-gray-400 text-xs">
-            {item.date}
+      <View className="bg-surface-light dark:bg-surface-dark p-5 mb-4 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 flex-row justify-between items-center">
+        <View className="flex-1 mr-4">
+          <Text className="text-lg font-bold text-text-primary dark:text-gray-100 mb-1">
+            {item.itemName}
           </Text>
-        </View>
-        {item.addedByName && (
-          <View className="flex-row items-center">
+          <View className="flex-row items-center mb-1">
             <Ionicons
-              name="person-outline"
+              name="calendar-outline"
               size={14}
               color="#6B7280"
               style={{ marginRight: 4 }}
             />
             <Text className="text-text-secondary dark:text-gray-400 text-xs">
-              {item.addedByName}
+              {item.date}
             </Text>
           </View>
-        )}
-        <View className="flex-row items-center mt-1">
-          <Ionicons
-            name="pricetag-outline"
-            size={14}
-            color="#6B7280"
-            style={{ marginRight: 4 }}
-          />
-          <Text className="text-text-secondary dark:text-gray-400 text-xs">
-            {item.category}
+          {item.addedByName && (
+            <View className="flex-row items-center">
+              <Ionicons
+                name="person-outline"
+                size={14}
+                color="#6B7280"
+                style={{ marginRight: 4 }}
+              />
+              <Text className="text-text-secondary dark:text-gray-400 text-xs">
+                {item.addedByName}
+              </Text>
+            </View>
+          )}
+          <View className="flex-row items-center mt-1">
+            <Ionicons
+              name="pricetag-outline"
+              size={14}
+              color="#6B7280"
+              style={{ marginRight: 4 }}
+            />
+            <Text className="text-text-secondary dark:text-gray-400 text-xs">
+              {item.category}
+            </Text>
+          </View>
+        </View>
+
+        <View className="items-end">
+          <Text className="text-xl font-bold text-primary dark:text-green-400">
+            ৳{item.price * item.quantity}
           </Text>
+          <Text className="text-text-secondary dark:text-gray-500 text-xs text-right mt-0.5 font-medium bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-lg">
+            {item.quantity} {item.quantityUnit} x ৳{item.price}
+          </Text>
+
+          {isAdmin && (
+            <TouchableOpacity
+              onPress={() => handleDelete(item.id)}
+              className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-full"
+              activeOpacity={0.7}
+            >
+              <Ionicons name="trash-outline" size={18} color="#EF4444" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
-
-      <View className="items-end">
-        <Text className="text-xl font-bold text-primary dark:text-green-400">
-          ৳{item.price * item.quantity}
-        </Text>
-        <Text className="text-text-secondary dark:text-gray-500 text-xs text-right mt-0.5 font-medium bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-lg">
-          {item.quantity} {item.quantityUnit} x ৳{item.price}
-        </Text>
-
-        {isAdmin && (
-          <TouchableOpacity
-            onPress={() => handleDelete(item.id)}
-            className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-full"
-            activeOpacity={0.7}
-          >
-            <Ionicons name="trash-outline" size={18} color="#EF4444" />
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
     </TouchableOpacity>
   );
 
@@ -129,9 +138,7 @@ export default function GroceryListScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-xl font-bold text-gray-900">
-          Grocery List
-        </Text>
+        <Text className="text-xl font-bold text-gray-900">Grocery List</Text>
         <View className="w-10" />
       </View>
 
@@ -175,10 +182,7 @@ export default function GroceryListScreen() {
           className="flex-1 bg-black/50 justify-center px-6"
           onPress={closeDetails}
         >
-          <Pressable
-            className="bg-white rounded-3xl p-6"
-            onPress={() => {}}
-          >
+          <Pressable className="bg-white rounded-3xl p-6" onPress={() => {}}>
             <View className="flex-row items-center justify-between mb-4">
               <Text className="text-xl font-bold text-gray-900">
                 {selectedItem?.itemName}
