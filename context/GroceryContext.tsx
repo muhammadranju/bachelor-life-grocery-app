@@ -1,5 +1,6 @@
+import * as SecureStore from "expo-secure-store";
 import { createContext, useContext, useEffect, useState } from "react";
-
+import { Platform } from "react-native";
 import { BACKEND_BASE_URL } from "../constants/Config";
 import { useAuth } from "./AuthContext";
 
@@ -43,11 +44,20 @@ export function GroceryProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth(); // Could be used to filter or tag
 
+  const getToken = async () => {
+    if (Platform.OS === "web") {
+      return localStorage.getItem("accessToken");
+    }
+    return await SecureStore.getItemAsync("accessToken");
+  };
+
   const addGrocery = async (item: Omit<GroceryItem, "id" | "createdAt">) => {
+    const token = await getToken();
     const response = await fetch(`${BACKEND_BASE_URL}/grocery`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
       },
       body: JSON.stringify(item),
     });
@@ -60,17 +70,23 @@ export function GroceryProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteGrocery = async (id: string) => {
+    const token = await getToken();
     await fetch(`${BACKEND_BASE_URL}/grocery/${id}`, {
       method: "DELETE",
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+      },
     });
     setGroceries((prev) => prev.filter((item) => item.id !== id));
   };
 
   const updateGrocery = async (id: string, data: Partial<GroceryItem>) => {
+    const token = await getToken();
     const response = await fetch(`${BACKEND_BASE_URL}/grocery/${id}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
       },
       body: JSON.stringify(data),
     });
@@ -93,7 +109,12 @@ export function GroceryProvider({ children }: { children: React.ReactNode }) {
       }
       setIsLoading(true);
       try {
-        const response = await fetch(`${BACKEND_BASE_URL}/grocery`);
+        const token = await getToken();
+        const response = await fetch(`${BACKEND_BASE_URL}/grocery`, {
+          headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        });
         const json = await response.json();
         const items = (json.data || []) as GroceryItem[];
         setGroceries(items);
