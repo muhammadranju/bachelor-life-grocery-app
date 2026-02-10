@@ -52,13 +52,13 @@ export default function AddUserScreen() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: token || "",
+          Authorization: token ? `Bearer ${token}` : "",
         },
         body: JSON.stringify({
           name,
           email,
           password,
-          role,
+          role: role.toUpperCase(),
         }),
       });
 
@@ -99,7 +99,7 @@ export default function AddUserScreen() {
         className="flex-1"
       >
         <ScrollView contentContainerClassName="p-6">
-          <View className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-5 mt-14">
+          <View className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-5">
             <View className="mb-4">
               <Text className="text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-wider opacity-70">
                 Full Name
