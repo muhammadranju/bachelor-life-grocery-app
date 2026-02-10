@@ -4,28 +4,28 @@ import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { BACKEND_BASE_URL } from "../constants/Config";
+import { useAlert } from "../context/AlertContext";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
+  const { showAlert } = useAlert();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Error", "Please enter both email and password");
+      showAlert("Error", "Please enter both email and password", [], "error");
       return;
     }
 
@@ -52,7 +52,7 @@ export default function LoginScreen() {
       }
       await login(token);
     } catch (error: any) {
-      Alert.alert("Login Failed", error.message);
+      showAlert("Login Failed", error.message, [], "error");
     } finally {
       setLoading(false);
     }
@@ -73,83 +73,96 @@ export default function LoginScreen() {
         </Text>
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        className="flex-1 justify-center px-6"
+      <KeyboardAwareScrollView
+        enableOnAndroid={true}
+        extraScrollHeight={100}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: "center",
+          paddingTop: "60%",
+          paddingBottom: 40,
+        }}
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1, paddingHorizontal: 24 }}
       >
-        <ScrollView contentContainerClassName="flex-grow justify-center pt-[30%]">
-          <View className="bg-white p-8 rounded-3xl shadow-xl shadow-green-900/10 border border-gray-100">
-            <Text className="text-xl font-bold text-gray-900 mb-6 text-center">
-              Welcome Back
+        <View className="bg-white p-8 rounded-3xl shadow-xl shadow-green-900/10 border border-gray-100">
+          <Text className="text-xl font-bold text-gray-900 mb-6 text-center">
+            Welcome Back
+          </Text>
+
+          <View className="mb-6">
+            <Text className="font-bold text-gray-500 mb-2 ml-1 uppercase text-xs">
+              Email
             </Text>
-
-            <View className="mb-6">
-              <Text className="font-bold text-gray-500 mb-2 ml-1 uppercase text-xs">
-                Email
-              </Text>
-              <View className="flex-row items-center bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 focus:border-[#00B761]">
-                <Ionicons name="mail-outline" size={20} color="#9CA3AF" />
-                <TextInput
-                  className="flex-1 ml-3 text-base text-gray-900"
-                  placeholder="name@example.com"
-                  placeholderTextColor="#9CA3AF"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
+            <View className="flex-row items-center bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 focus:border-[#00B761]">
+              <Ionicons name="mail-outline" size={20} color="#9CA3AF" />
+              <TextInput
+                className="flex-1 ml-3 text-base text-gray-900"
+                placeholder="name@example.com"
+                placeholderTextColor="#9CA3AF"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
             </View>
+          </View>
 
-            <View className="mb-8">
-              <Text className="font-bold text-gray-500 mb-2 ml-1 uppercase text-xs">
-                Password
-              </Text>
-              <View className="flex-row items-center bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 focus:border-[#00B761]">
+          <View className="mb-8">
+            <Text className="font-bold text-gray-500 mb-2 ml-1 uppercase text-xs">
+              Password
+            </Text>
+            <View className="flex-row items-center bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 focus:border-[#00B761]">
+              <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" />
+              <TextInput
+                className="flex-1 ml-3 text-base text-gray-900"
+                placeholder="••••••••"
+                placeholderTextColor="#9CA3AF"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                className="p-1"
+              >
                 <Ionicons
-                  name="lock-closed-outline"
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
                   size={20}
                   color="#9CA3AF"
                 />
-                <TextInput
-                  className="flex-1 ml-3 text-base text-gray-900"
-                  placeholder="••••••••"
-                  placeholderTextColor="#9CA3AF"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                />
-              </View>
-            </View>
-
-            <TouchableOpacity
-              onPress={handleLogin}
-              disabled={loading}
-              className={`py-4 rounded-2xl shadow-lg shadow-green-500/30 ${
-                loading ? "bg-gray-400" : "bg-[#00B761]"
-              }`}
-            >
-              {loading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text className="text-white text-center font-bold text-lg">
-                  Log In
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            <View className="mt-6 flex-row justify-center">
-              <Text className="text-gray-500">Don't have an account? </Text>
-              <Link href="/signup" asChild>
-                <TouchableOpacity>
-                  <Text className="text-[#00B761] font-bold">Sign Up</Text>
-                </TouchableOpacity>
-              </Link>
+              </TouchableOpacity>
             </View>
           </View>
-          <View className="h-10" />
-        </ScrollView>
-      </KeyboardAvoidingView>
+
+          <TouchableOpacity
+            onPress={handleLogin}
+            disabled={loading}
+            className={`py-4 rounded-2xl shadow-lg shadow-green-500/30 ${
+              loading ? "bg-gray-400" : "bg-[#00B761]"
+            }`}
+          >
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text className="text-white text-center font-bold text-lg">
+                Log In
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <View className="mt-6 flex-row justify-center">
+            <Text className="text-gray-500">Don't have an account? </Text>
+            <Link href="/signup" asChild>
+              <TouchableOpacity>
+                <Text className="text-[#00B761] font-bold">Sign Up</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
+        </View>
+        <View className="h-10" />
+      </KeyboardAwareScrollView>
     </View>
   );
 }
