@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "bachelor life grocery",
+    "name": "Bachelor Life Grocery",
     "slug": "bachelor-life-grocery",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/bachelor-life-logo.png",
     "scheme": "bachelor-life-grocery",
