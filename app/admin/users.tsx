@@ -1,10 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
-  Alert,
   FlatList,
   Platform,
   RefreshControl,
@@ -14,11 +13,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BACKEND_BASE_URL } from "../../constants/Config";
+import { useAlert } from "../../context/AlertContext";
 import { useAuth } from "../../context/AuthContext";
 
 export default function UserListScreen() {
   const router = useRouter();
   const { role, user: currentUser } = useAuth();
+  const { showAlert } = useAlert();
   const [users, setUsers] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const isAdmin =
@@ -27,14 +28,21 @@ export default function UserListScreen() {
     role === "SUPER_ADMIN" ||
     role === "super_admin";
 
-  useEffect(() => {
-    if (!isAdmin) {
-      Alert.alert("Access Denied", "Only admins can view this page");
-      router.back();
-      return;
-    }
-    fetchUsers();
-  }, [role, isAdmin]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAdmin) {
+        showAlert(
+          "Access Denied",
+          "Only admins can view this page",
+          [],
+          "error",
+        );
+        router.back();
+        return;
+      }
+      fetchUsers();
+    }, [role, isAdmin]),
+  );
 
   const fetchUsers = async () => {
     setRefreshing(true);
@@ -56,36 +64,46 @@ export default function UserListScreen() {
       setUsers(userList);
     } catch (error: any) {
       console.error("Fetch Users Error:", error);
-      Alert.alert("Error", "Failed to fetch users: " + error.message);
+      showAlert(
+        "Error",
+        "Failed to fetch users: " + error.message,
+        [],
+        "error",
+      );
       setUsers([]);
     }
     setRefreshing(false);
   };
 
   const handleDeleteUser = async (userId: string) => {
-    Alert.alert("Warning", "Are you sure you want to delete this user?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          let token = null;
-          if (Platform.OS === "web") {
-            token = localStorage.getItem("accessToken");
-          } else {
-            token = await SecureStore.getItemAsync("accessToken");
-          }
+    showAlert(
+      "Warning",
+      "Are you sure you want to delete this user?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            let token = null;
+            if (Platform.OS === "web") {
+              token = localStorage.getItem("accessToken");
+            } else {
+              token = await SecureStore.getItemAsync("accessToken");
+            }
 
-          await fetch(`${BACKEND_BASE_URL}/user/${userId}`, {
-            method: "DELETE",
-            headers: {
-              Authorization: token ? `Bearer ${token}` : "",
-            },
-          });
-          fetchUsers();
+            await fetch(`${BACKEND_BASE_URL}/user/${userId}`, {
+              method: "DELETE",
+              headers: {
+                Authorization: token ? `Bearer ${token}` : "",
+              },
+            });
+            fetchUsers();
+          },
         },
-      },
-    ]);
+      ],
+      "warning",
+    );
   };
 
   const renderItem = ({ item }: { item: any }) => {
@@ -127,14 +145,12 @@ export default function UserListScreen() {
           </View>
         </View>
 
-        {item.id !== currentUser?.uid && (
-          <TouchableOpacity
-            onPress={() => handleDeleteUser(item.id)}
-            className="p-3 bg-red-50 rounded-full"
-          >
-            <Ionicons name="trash-outline" size={20} color="#EF4444" />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          onPress={() => handleDeleteUser(item.id)}
+          className="p-3 bg-red-50 rounded-full"
+        >
+          <Ionicons name="trash-outline" size={20} color="#EF4444" />
+        </TouchableOpacity>
       </View>
     );
   };
@@ -155,7 +171,7 @@ export default function UserListScreen() {
       </View>
       <FlatList
         data={users}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id}
         renderItem={renderItem}
         contentContainerClassName="p-6 pt-2 pb-24"
         refreshControl={
