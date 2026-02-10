@@ -1,10 +1,9 @@
-import * as Device from "expo-device";
 import Constants from "expo-constants";
+import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
-
-const BACKEND_BASE_URL = "http://localhost:5008/api/v1";
+import { BACKEND_BASE_URL } from "../constants/Config";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -17,8 +16,7 @@ Notifications.setNotificationHandler({
 });
 
 const getProjectId = () =>
-  Constants.expoConfig?.extra?.eas?.projectId ??
-  Constants.easConfig?.projectId;
+  Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
 
 export function useNotifications() {
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>("");
@@ -96,7 +94,7 @@ async function registerForPushNotificationsAsync() {
       console.log("Failed to get push token for push notification!");
       return;
     }
-    
+
     // Handle Web specifically
     const projectId = getProjectId();
     if (!projectId) {
@@ -109,7 +107,7 @@ async function registerForPushNotificationsAsync() {
           vapidPublicKey:
             "BHNE8yvlQ-KS7m2G4pOZWqudbKCfBzIPtiFdSYkUloLLWjifsD0pg49Kxfos4d7HYbDfJ_R-VQgs4HVmSR0P07E",
           projectId,
-        });
+        } as any);
         token = response.data;
       } catch (error) {
         console.log(
