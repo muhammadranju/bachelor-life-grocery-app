@@ -15,6 +15,7 @@ type UserRole =
 interface UserData {
   id: string;
   email: string;
+  name: string;
   role: UserRole;
   [key: string]: any;
 }
@@ -25,6 +26,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (token: string) => Promise<void>;
   logout: () => Promise<void>;
+  completeOnboarding: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -33,6 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   login: async () => {},
   logout: async () => {},
+  completeOnboarding: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -67,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (token) {
         try {
           const decoded: any = jwtDecode(token);
+
           // Check expiry if needed
           if (decoded.exp * 1000 < Date.now()) {
             await logout();
@@ -74,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser({
               id: decoded.id,
               email: decoded.email,
+              name: decoded.name,
               role: decoded.role,
             });
             setRole(decoded.role);
@@ -92,23 +97,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === "login";
+    const inAuthGroup = segments[0] === "login" || segments[0] === "signup";
     const inOnboardingGroup = segments[0] === "onboarding";
 
     if (!hasLaunched && !inOnboardingGroup) {
       router.replace("/onboarding");
     } else if (hasLaunched && inOnboardingGroup) {
       if (user) {
-        router.replace("/");
+        router.replace("/(tabs)");
       } else {
         router.replace("/login");
       }
     } else if (!user && !inAuthGroup && !inOnboardingGroup) {
       // Redirect to the login page
       router.replace("/login");
-    } else if (user && inAuthGroup) {
-      // Redirect away from the login page
-      router.replace("/");
+    } else if (user && (inAuthGroup || (segments as string[]).length === 0)) {
+      // Redirect away from the login page or root
+      router.replace("/(tabs)");
     }
   }, [user, segments, isLoading, hasLaunched]);
 
@@ -123,12 +128,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser({
       id: decoded.id,
       email: decoded.email,
+      name: decoded.name || decoded.email?.split("@")[0],
       role: decoded.role,
     });
     setRole(decoded.role);
 
-    // Explicitly navigate to root
-    router.replace("/");
+    // Explicitly navigate to tabs
+    router.replace("/(tabs)");
   };
 
   const logout = async () => {
@@ -141,8 +147,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRole(null);
   };
 
+  const completeOnboarding = async () => {
+    if (Platform.OS === "web") {
+      localStorage.setItem("hasLaunched", "true");
+    } else {
+      await SecureStore.setItemAsync("hasLaunched", "true");
+    }
+    setHasLaunched(true);
+    router.replace("/login");
+  };
+
   return (
-    <AuthContext.Provider value={{ user, role, isLoading, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, role, isLoading, login, logout, completeOnboarding }}
+    >
       {children}
     </AuthContext.Provider>
   );
