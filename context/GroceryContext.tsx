@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 import { BACKEND_BASE_URL } from "../constants/Config";
 import { useAuth } from "./AuthContext";
+import { useSocket } from "./SocketContext";
 
 export interface GroceryItem {
   id: string;
@@ -17,14 +18,33 @@ export interface GroceryItem {
   createdAt: any;
 }
 
+export interface MonthlyStat {
+  _id: { month: number; year: number };
+  count: number;
+  totalSpent: number;
+}
+
+export interface UserStat {
+  _id: string;
+  count: number;
+  totalSpent: number;
+}
+
+export interface AnalyticsData {
+  monthlyStats: MonthlyStat[];
+  userStats: UserStat[];
+}
+
 interface GroceryContextType {
   groceries: GroceryItem[];
   isLoading: boolean;
   addGrocery: (item: Omit<GroceryItem, "id" | "createdAt">) => Promise<void>;
   deleteGrocery: (id: string) => Promise<void>;
   updateGrocery: (id: string, data: Partial<GroceryItem>) => Promise<void>;
+  refreshGroceries: (silent?: boolean) => Promise<void>;
   getTodayTotal: () => number;
   getMonthTotal: () => number;
+  getAnalytics: () => Promise<AnalyticsData | null>;
 }
 
 const GroceryContext = createContext<GroceryContextType>({
@@ -33,8 +53,10 @@ const GroceryContext = createContext<GroceryContextType>({
   addGrocery: async () => {},
   deleteGrocery: async () => {},
   updateGrocery: async () => {},
+  refreshGroceries: async () => {},
   getTodayTotal: () => 0,
   getMonthTotal: () => 0,
+  getAnalytics: async () => null,
 });
 
 export const useGrocery = () => useContext(GroceryContext);
@@ -43,6 +65,7 @@ export function GroceryProvider({ children }: { children: React.ReactNode }) {
   const [groceries, setGroceries] = useState<GroceryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth(); // Could be used to filter or tag
+  const { socket } = useSocket();
 
   const getToken = async () => {
     if (Platform.OS === "web") {
@@ -100,33 +123,70 @@ export function GroceryProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const refreshGroceries = async (silent = false) => {
+    // If we have groceries and user is temporarily null/undefined, don't clear data immediately
+    if (!user) {
+      // Only clear if we really want to (like on logout), but here we might just return
+      // if it's an auto-refresh.
+      // However, if the user explicitly logged out, AuthContext should handle navigation.
+      // If we are just refreshing, we should probably wait or return.
+      
+      // Better approach: If token is missing, then clear. User object might be lagging.
+      const token = await getToken();
+      if (!token) {
+         setGroceries([]);
+         setIsLoading(false);
+         return;
+      }
+    }
+    
+    // Only set loading if we don't have data yet to avoid flash of empty content
+    if (!silent && groceries.length === 0) setIsLoading(true);
+    
+    try {
+      const token = await getToken();
+      if (!token) return; // Should have been caught above, but safety check
+
+      const response = await fetch(`${BACKEND_BASE_URL}/grocery`, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch groceries");
+      }
+      const json = await response.json();
+      const items = (json.data || []) as GroceryItem[];
+      setGroceries(items);
+    } catch (error) {
+      console.error("Failed to refresh groceries:", error);
+      // Optional: don't clear groceries on error so user still sees old data
+    } finally {
+      if (!silent) setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      if (!user) {
-        setGroceries([]);
-        setIsLoading(false);
-        return;
-      }
-      setIsLoading(true);
-      try {
-        const token = await getToken();
-        const response = await fetch(`${BACKEND_BASE_URL}/grocery`, {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : "",
-          },
-        });
-        const json = await response.json();
-        const items = (json.data || []) as GroceryItem[];
-        setGroceries(items);
-      } catch (error) {
-        setGroceries([]);
-      } finally {
-        setIsLoading(false);
-      }
+     // Initial load
+     if (user) {
+        refreshGroceries();
+     }
+  }, [user]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUpdate = () => {
+      console.log("Grocery update received via socket");
+      refreshGroceries(true);
     };
 
-    load();
-  }, [user]);
+    socket.on("grocery-update", handleUpdate);
+
+    return () => {
+      socket.off("grocery-update", handleUpdate);
+    };
+  }, [socket, user]);
 
   const getTodayTotal = () => {
     const today = new Date().toISOString().split("T")[0];
@@ -143,6 +203,25 @@ export function GroceryProvider({ children }: { children: React.ReactNode }) {
       .reduce((sum, item) => sum + item.price * item.quantity, 0);
   };
 
+  const getAnalytics = async () => {
+    try {
+      const token = await getToken();
+      const response = await fetch(`${BACKEND_BASE_URL}/grocery/analytics`, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+      const json = await response.json();
+      if (response.ok) {
+        return json.data as AnalyticsData;
+      }
+      return null;
+    } catch (error) {
+      console.error("Failed to fetch analytics:", error);
+      return null;
+    }
+  };
+
   return (
     <GroceryContext.Provider
       value={{
@@ -151,8 +230,10 @@ export function GroceryProvider({ children }: { children: React.ReactNode }) {
         addGrocery,
         deleteGrocery,
         updateGrocery,
+        refreshGroceries,
         getTodayTotal,
         getMonthTotal,
+        getAnalytics,
       }}
     >
       {children}
