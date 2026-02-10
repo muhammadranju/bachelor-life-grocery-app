@@ -65,8 +65,8 @@ export default function ProfileScreen() {
             {user?.email?.charAt(0).toUpperCase()}
           </Text>
         </View>
-        <Text className="text-xl font-bold text-gray-900">
-          {user?.displayName || "User"}
+        <Text className="text-xl font-bold text-gray-900 capitalize">
+          {user?.name || "User"}
         </Text>
         <Text className="text-gray-500">{user?.email}</Text>
         <View className="bg-blue-100 px-3 py-1 rounded-full mt-2">

@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useCallback, useState } from "react";
 import {
-  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -12,35 +12,51 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { StatusBar } from "expo-status-bar";
+import { useAlert } from "../../context/AlertContext";
 import { useAuth } from "../../context/AuthContext";
+import { useBudget } from "../../context/BudgetContext";
 import { GroceryItem, useGrocery } from "../../context/GroceryContext";
 
 export default function GroceryListScreen() {
   const router = useRouter();
-  const { groceries, isLoading, deleteGrocery } = useGrocery();
+  const { groceries, isLoading, deleteGrocery, refreshGroceries } =
+    useGrocery();
+  const { refreshBudget } = useBudget();
   const { role } = useAuth();
+  const { showAlert } = useAlert();
   const [selectedItem, setSelectedItem] = useState<GroceryItem | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshGroceries(true);
+    }, []),
+  );
 
   const isAdmin =
     role === "admin" || role === "ADMIN" || role === "SUPER_ADMIN";
 
   const handleDelete = (id: string) => {
-    Alert.alert("Delete Item", "Are you sure you want to delete this item?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteGrocery(id);
-          } catch (error: any) {
-            Alert.alert("Error", error.message);
-          }
+    showAlert(
+      "Delete Item",
+      "Are you sure you want to delete this item?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteGrocery(id);
+              await refreshBudget();
+            } catch (error: any) {
+              showAlert("Error", error.message, [], "error");
+            }
+          },
         },
-      },
-    ]);
+      ],
+      "warning",
+    );
   };
 
   const openDetails = (item: GroceryItem) => {
@@ -101,9 +117,7 @@ export default function GroceryListScreen() {
     <SafeAreaView className="flex-1 bg-gray-50 edges={['top']}">
       <StatusBar style="dark" backgroundColor="#ffffff" />
       <View className="px-6 py-4 flex-row justify-between items-center bg-white border-b border-gray-100">
-        <Text className="text-2xl font-bold text-gray-900">
-          Grocery List
-        </Text>
+        <Text className="text-2xl font-bold text-gray-900">Grocery List</Text>
         <View className="bg-gray-100 px-3 py-1 rounded-full">
           <Text className="text-gray-900 font-bold text-xs">
             {groceries.length} Items
@@ -118,7 +132,11 @@ export default function GroceryListScreen() {
         contentContainerClassName="p-6 pb-24"
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isLoading} tintColor="#00B761" />
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={refreshGroceries}
+            tintColor="#00B761"
+          />
         }
         ListEmptyComponent={
           <View className="items-center justify-center mt-20 opacity-50">
@@ -149,10 +167,7 @@ export default function GroceryListScreen() {
           className="flex-1 bg-black/50 justify-center px-6"
           onPress={closeDetails}
         >
-          <Pressable
-            className="bg-white rounded-3xl p-6"
-            onPress={() => {}}
-          >
+          <Pressable className="bg-white rounded-3xl p-6" onPress={() => {}}>
             <View className="flex-row items-center justify-between mb-4">
               <Text className="text-xl font-bold text-gray-900">
                 {selectedItem?.itemName}

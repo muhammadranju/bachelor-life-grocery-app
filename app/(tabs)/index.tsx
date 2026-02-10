@@ -1,14 +1,44 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useAuth } from "../../context/AuthContext";
+import { useBudget } from "../../context/BudgetContext";
 import { useGrocery } from "../../context/GroceryContext";
+import { useNotification } from "../../context/NotificationContext";
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { getTodayTotal, getMonthTotal, groceries } = useGrocery();
+  const { getTodayTotal, getMonthTotal, groceries, refreshGroceries } =
+    useGrocery();
+  const { budgetStatus, refreshBudget } = useBudget();
+  const { unreadCount, refreshNotifications } = useNotification();
   const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshGroceries(true);
+      refreshNotifications(true);
+      refreshBudget(true);
+    }, []),
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      refreshGroceries(),
+      refreshNotifications(),
+      refreshBudget(),
+    ]);
+    setRefreshing(false);
+  }, []);
 
   const recentGroups = useMemo(() => {
     const sorted = [...groceries].sort((a, b) => {
@@ -58,20 +88,23 @@ export default function Dashboard() {
             <Text className="text-green-100 font-medium text-sm">
               Good Morning,
             </Text>
-            <Text className="text-white text-2xl font-bold">
-              {user?.displayName || "User"}
+            <Text className="text-white text-2xl font-bold capitalize">
+              {user?.name || user?.displayName || "User"}
             </Text>
           </View>
           <TouchableOpacity
-            onPress={() => alert("Notifications coming soon!")}
-            className="bg-white/20 p-2 rounded-full"
+            onPress={() => router.push("/notifications")}
+            className="bg-white/20 p-2 rounded-full relative z-50"
           >
             <Ionicons name="notifications-outline" size={24} color="white" />
+            {unreadCount > 0 && (
+              <View className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border border-white" />
+            )}
           </TouchableOpacity>
         </View>
       </View>
 
-      <View className="pt-[20%] px-6 z-10">
+      <View className="pt-[20%] px-6 z-10" pointerEvents="box-none">
         {/* Main Spending Card - Floating */}
         <View className="bg-white p-6 rounded-3xl shadow-lg shadow-green-900/10 mb-8 mt-6">
           <Text className="text-gray-400 text-sm font-medium mb-1 text-center">
@@ -92,11 +125,20 @@ export default function Dashboard() {
               </Text>
             </View>
             <View className="items-center flex-1">
-              <View className="flex-row items-center mb-1">
-                <Ionicons name="alert-circle" size={16} color="#F59E0B" />
-                <Text className="text-xs text-gray-400 ml-1">Limit</Text>
-              </View>
-              <Text className="text-lg font-bold text-gray-900">No Limit</Text>
+              <TouchableOpacity
+                onPress={() => router.push("/budget")}
+                className="items-center"
+              >
+                <View className="flex-row items-center mb-1">
+                  <Ionicons name="alert-circle" size={16} color="#F59E0B" />
+                  <Text className="text-xs text-gray-400 ml-1">Limit</Text>
+                </View>
+                <Text className="text-lg font-bold text-gray-900">
+                  {budgetStatus.limit > 0
+                    ? `৳${budgetStatus.remaining.toLocaleString()}`
+                    : "No Limit"}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -116,13 +158,13 @@ export default function Dashboard() {
 
           <TouchableOpacity
             className="flex-1 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 items-center flex-row justify-center"
-            onPress={() => router.push("/(tabs)/list")}
+            onPress={() => router.push("/announcements")}
             activeOpacity={0.7}
           >
-            <View className="bg-blue-100 w-10 h-10 rounded-full items-center justify-center mr-3">
-              <Ionicons name="list" size={20} color="#3B82F6" />
+            <View className="bg-orange-100 w-10 h-10 rounded-full items-center justify-center mr-3">
+              <Ionicons name="megaphone-outline" size={20} color="#EA580C" />
             </View>
-            <Text className="font-bold text-gray-800">View All</Text>
+            <Text className="font-bold text-gray-800">Announcement</Text>
           </TouchableOpacity>
         </View>
 
@@ -136,6 +178,13 @@ export default function Dashboard() {
         className="flex-1"
         contentContainerClassName="px-6 pb-24"
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#00B761"
+          />
+        }
       >
         <View className="space-y-3">
           {recentGroups.length === 0 ? (
