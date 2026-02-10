@@ -3,6 +3,10 @@
 # dependencies
 node_modules/
 firebaseConfig.ts
+service_account.json
+/backend
+
+
 
 # Expo
 .expo/
